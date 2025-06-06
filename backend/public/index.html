@@ -1,1 +1,395 @@
-#index.html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SMS Bridge</title>
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="SMS Bridge">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icons/icon-192x192.png">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 400px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+        
+        .status {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 30px;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+        }
+        
+        .status-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #ff4444;
+            animation: pulse 2s infinite;
+        }
+        
+        .status-dot.connected {
+            background: #44ff44;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        
+        .messages {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        .message {
+            margin-bottom: 15px;
+            padding: 12px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            font-size: 0.9em;
+        }
+        
+        .message.sent {
+            background: rgba(76, 175, 80, 0.3);
+            margin-left: 20px;
+        }
+        
+        .message.received {
+            background: rgba(33, 150, 243, 0.3);
+            margin-right: 20px;
+        }
+        
+        .message-header {
+            font-weight: bold;
+            margin-bottom: 5px;
+            font-size: 0.8em;
+            opacity: 0.8;
+        }
+        
+        .test-section {
+            margin-top: 30px;
+        }
+        
+        .btn {
+            width: 100%;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            border-radius: 10px;
+            color: white;
+            font-size: 1.1em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 10px;
+        }
+        
+        .btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+        }
+        
+        .btn:active {
+            transform: translateY(0);
+        }
+        
+        .input-group {
+            margin-bottom: 15px;
+        }
+        
+        .input-group input {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.9);
+            color: #333;
+            font-size: 1em;
+        }
+        
+        .hidden {
+            display: none;
+        }
+        
+        .info {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+            font-size: 0.9em;
+            line-height: 1.4;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📱 SMS Bridge</h1>
+            <p>Secure message monitoring</p>
+        </div>
+        
+        <div class="status">
+            <div class="status-dot" id="statusDot"></div>
+            <span id="statusText">Connecting...</span>
+        </div>
+        
+        <div class="messages" id="messages">
+            <div class="message">
+                <div class="message-header">System</div>
+                <div>Waiting for connection...</div>
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <button class="btn" onclick="sendTestMessage()">📤 Send Test Message</button>
+            <button class="btn" onclick="simulateIncomingSMS()">📥 Simulate Incoming SMS</button>
+            
+            <div id="customMessage" class="hidden">
+                <div class="input-group">
+                    <input type="text" id="testFrom" placeholder="From (phone number)" value="+1234567890">
+                </div>
+                <div class="input-group">
+                    <input type="text" id="testMessage" placeholder="Message content" value="Test message from iPhone">
+                </div>
+                <button class="btn" onclick="sendCustomMessage()">Send Custom Message</button>
+            </div>
+        </div>
+        
+        <div class="info">
+            <strong>How it works:</strong><br>
+            • This app monitors SMS messages<br>
+            • Messages are sent to parent dashboard<br>
+            • Keep app open in background<br>
+            • Connection status shown above
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        let socket;
+        let isConnected = false;
+        
+        // Initialize socket connection
+        function initSocket() {
+            socket = io();
+            
+            socket.on('connect', () => {
+                console.log('Connected to server');
+                isConnected = true;
+                updateStatus('Connected', true);
+                
+                // Register this device
+                socket.emit('register-device', {
+                    name: 'iPhone SMS Bridge',
+                    type: 'child',
+                    userAgent: navigator.userAgent
+                });
+                
+                addMessage('System', 'Connected to monitoring server');
+            });
+            
+            socket.on('disconnect', () => {
+                console.log('Disconnected from server');
+                isConnected = false;
+                updateStatus('Disconnected', false);
+                addMessage('System', 'Disconnected from server');
+            });
+            
+            socket.on('send-sms-to-device', (message) => {
+                console.log('Received SMS send request:', message);
+                addMessage('Dashboard → ' + message.to, message.content, 'sent');
+                
+                // In a real implementation, this would interface with iOS SMS
+                // For now, we'll just log and display
+                simulateOutgoingSMS(message.to, message.content);
+            });
+            
+            // Heartbeat to keep connection alive
+            setInterval(() => {
+                if (isConnected) {
+                    socket.emit('heartbeat');
+                }
+            }, 30000);
+        }
+        
+        function updateStatus(text, connected) {
+            const statusText = document.getElementById('statusText');
+            const statusDot = document.getElementById('statusDot');
+            
+            statusText.textContent = text;
+            
+            if (connected) {
+                statusDot.classList.add('connected');
+            } else {
+                statusDot.classList.remove('connected');
+            }
+        }
+        
+        function addMessage(from, content, type = 'received') {
+            const messagesContainer = document.getElementById('messages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${type}`;
+            
+            messageDiv.innerHTML = `
+                <div class="message-header">${from} • ${new Date().toLocaleTimeString()}</div>
+                <div>${content}</div>
+            `;
+            
+            messagesContainer.appendChild(messageDiv);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            
+            // Keep only last 20 messages
+            while (messagesContainer.children.length > 20) {
+                messagesContainer.removeChild(messagesContainer.firstChild);
+            }
+        }
+        
+        function sendTestMessage() {
+            if (!isConnected) {
+                alert('Not connected to server');
+                return;
+            }
+            
+            const testMessage = {
+                from: '+1234567890',
+                to: 'iPhone',
+                content: 'This is a test SMS message from the child device',
+                timestamp: new Date().toISOString()
+            };
+            
+            socket.emit('sms-received', testMessage);
+            addMessage(testMessage.from, testMessage.content, 'received');
+        }
+        
+        function simulateIncomingSMS() {
+            const messages = [
+                { from: '+1555123456', content: 'Hey, are you free this weekend?' },
+                { from: 'Mom', content: 'Don\'t forget to pick up groceries' },
+                { from: '+1555987654', content: 'Meeting moved to 3 PM tomorrow' },
+                { from: 'School', content: 'Reminder: Parent-teacher conference next week' }
+            ];
+            
+            const randomMessage = messages[Math.floor(Math.random() * messages.length)];
+            
+            if (isConnected) {
+                socket.emit('sms-received', {
+                    ...randomMessage,
+                    to: 'iPhone',
+                    timestamp: new Date().toISOString()
+                });
+            }
+            
+            addMessage(randomMessage.from, randomMessage.content, 'received');
+        }
+        
+        function sendCustomMessage() {
+            const from = document.getElementById('testFrom').value;
+            const content = document.getElementById('testMessage').value;
+            
+            if (!from || !content) {
+                alert('Please fill in both fields');
+                return;
+            }
+            
+            if (isConnected) {
+                socket.emit('sms-received', {
+                    from: from,
+                    to: 'iPhone',
+                    content: content,
+                    timestamp: new Date().toISOString()
+                });
+            }
+            
+            addMessage(from, content, 'received');
+        }
+        
+        function simulateOutgoingSMS(to, content) {
+            // In a real implementation, this would send actual SMS
+            console.log(`Would send SMS to ${to}: ${content}`);
+            addMessage('iPhone → ' + to, content, 'sent');
+        }
+        
+        // Show/hide custom message form
+        document.addEventListener('click', (e) => {
+            if (e.target.textContent.includes('Send Test Message')) {
+                const customDiv = document.getElementById('customMessage');
+                customDiv.classList.toggle('hidden');
+            }
+        });
+        
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            initSocket();
+            
+            // Register service worker for PWA
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.register('/sw.js').catch(console.error);
+            }
+        });
+        
+        // Keep screen awake (iOS Safari)
+        let wakeLock = null;
+        async function requestWakeLock() {
+            try {
+                if ('wakeLock' in navigator) {
+                    wakeLock = await navigator.wakeLock.request('screen');
+                }
+            } catch (err) {
+                console.log('Wake lock not supported');
+            }
+        }
+        
+        // Request wake lock when app becomes visible
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden && !wakeLock) {
+                requestWakeLock();
+            }
+        });
+        
+        // Initial wake lock request
+        requestWakeLock();
+    </script>
+</body>
+</html>
