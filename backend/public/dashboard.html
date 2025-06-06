@@ -170,3 +170,585 @@
         .form-group textarea,
         .form-group select {
             width: 100%;
+            padding: 12px;
+            border: 2px solid #e9ecef;
+            border-radius: 6px;
+            font-size: 1em;
+            transition: border-color 0.3s ease;
+        }
+        
+        .form-group input:focus,
+        .form-group textarea:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .form-group textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+        
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-size: 1em;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 100%;
+        }
+        
+        .btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn:active {
+            transform: translateY(0);
+        }
+        
+        .btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .devices-list {
+            padding: 20px;
+        }
+        
+        .device-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            transition: background-color 0.3s ease;
+        }
+        
+        .device-item:hover {
+            background: #f8f9fa;
+        }
+        
+        .device-info h4 {
+            margin-bottom: 5px;
+            color: #333;
+        }
+        
+        .device-info p {
+            font-size: 0.85em;
+            color: #666;
+        }
+        
+        .no-messages {
+            text-align: center;
+            color: #666;
+            padding: 40px;
+            font-style: italic;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-card {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            text-align: center;
+        }
+        
+        .stat-card h3 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            color: #667eea;
+        }
+        
+        .stat-card p {
+            color: #666;
+            font-size: 0.9em;
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                grid-template-columns: 1fr;
+                gap: 20px;
+                margin: 20px auto;
+                padding: 0 15px;
+            }
+            
+            .header-content {
+                flex-direction: column;
+                gap: 15px;
+                text-align: center;
+            }
+            
+            .header-stats {
+                justify-content: center;
+            }
+            
+            .stats-grid {
+                grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            }
+        }
+        
+        .alert {
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+        }
+        
+        .alert-success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        
+        .alert-warning {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+        }
+        
+        .alert-danger {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="header-content">
+            <h1>📊 SMS Monitor Dashboard</h1>
+            <div class="header-stats">
+                <div class="stat">
+                    <div class="stat-number" id="totalMessages">0</div>
+                    <div>Total Messages</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-number" id="connectedDevices">0</div>
+                    <div>Connected Devices</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-number" id="todayMessages">0</div>
+                    <div>Today's Messages</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="stats-grid container" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); max-width: 1200px;">
+        <div class="stat-card">
+            <h3 id="receivedCount">0</h3>
+            <p>Messages Received</p>
+        </div>
+        <div class="stat-card">
+            <h3 id="sentCount">0</h3>
+            <p>Messages Sent</p>
+        </div>
+        <div class="stat-card">
+            <h3 id="activeDevices">0</h3>
+            <p>Active Devices</p>
+        </div>
+        <div class="stat-card">
+            <h3 id="lastActivity">--</h3>
+            <p>Last Activity</p>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="panel">
+            <div class="panel-header">
+                📱 Live Messages
+                <div class="device-status">
+                    <div class="status-dot" id="connectionStatus"></div>
+                    <span id="connectionText">Connecting...</span>
+                </div>
+            </div>
+            <div class="messages-container" id="messagesContainer">
+                <div class="no-messages">
+                    Waiting for messages...
+                </div>
+            </div>
+        </div>
+
+        <div class="panel">
+            <div class="panel-header">📤 Send Message</div>
+            <div class="send-panel">
+                <div id="alertContainer"></div>
+                
+                <form id="sendMessageForm">
+                    <div class="form-group">
+                        <label for="targetDevice">Target Device:</label>
+                        <select id="targetDevice" required>
+                            <option value="">Select device...</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="recipientNumber">To (Phone Number):</label>
+                        <input type="tel" id="recipientNumber" placeholder="+1234567890" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="messageContent">Message:</label>
+                        <textarea id="messageContent" placeholder="Type your message here..." required></textarea>
+                    </div>
+                    
+                    <button type="submit" class="btn" id="sendButton">
+                        📤 Send Message
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="panel">
+            <div class="panel-header">🔗 Connected Devices</div>
+            <div class="devices-list" id="devicesList">
+                <div class="no-messages">
+                    No devices connected
+                </div>
+            </div>
+        </div>
+
+        <div class="panel">
+            <div class="panel-header">⚙️ Controls</div>
+            <div class="send-panel">
+                <button class="btn" onclick="clearMessages()" style="margin-bottom: 10px;">
+                    🗑️ Clear Message History
+                </button>
+                <button class="btn" onclick="exportMessages()" style="margin-bottom: 10px;">
+                    📋 Export Messages
+                </button>
+                <button class="btn" onclick="refreshDevices()">
+                    🔄 Refresh Devices
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        let socket;
+        let messages = [];
+        let devices = new Map();
+        let isConnected = false;
+
+        // Initialize socket connection
+        function initSocket() {
+            socket = io();
+
+            socket.on('connect', () => {
+                console.log('Connected to server');
+                isConnected = true;
+                updateConnectionStatus('Connected', true);
+                
+                // Register as dashboard
+                socket.emit('register-device', {
+                    name: 'Parent Dashboard',
+                    type: 'dashboard'
+                });
+                
+                // Load initial data
+                loadMessages();
+                loadDevices();
+            });
+
+            socket.on('disconnect', () => {
+                console.log('Disconnected from server');
+                isConnected = false;
+                updateConnectionStatus('Disconnected', false);
+            });
+
+            socket.on('new-message', (message) => {
+                console.log('New message received:', message);
+                addMessage(message);
+                updateStats();
+            });
+
+            socket.on('device-status', (data) => {
+                console.log('Device status update:', data);
+                updateDeviceStatus(data);
+            });
+        }
+
+        function updateConnectionStatus(text, connected) {
+            const statusElement = document.getElementById('connectionStatus');
+            const textElement = document.getElementById('connectionText');
+            
+            textElement.textContent = text;
+            
+            if (connected) {
+                statusElement.classList.add('connected');
+            } else {
+                statusElement.classList.remove('connected');
+            }
+        }
+
+        function addMessage(message) {
+            messages.unshift(message);
+            
+            // Keep only last 50 messages in memory
+            if (messages.length > 50) {
+                messages = messages.slice(0, 50);
+            }
+            
+            renderMessages();
+        }
+
+        function renderMessages() {
+            const container = document.getElementById('messagesContainer');
+            
+            if (messages.length === 0) {
+                container.innerHTML = '<div class="no-messages">No messages yet</div>';
+                return;
+            }
+            
+            container.innerHTML = messages.map(message => `
+                <div class="message ${message.direction}">
+                    <div class="message-header">
+                        <span class="message-from">${message.from} → ${message.to}</span>
+                        <span class="message-time">${formatTime(message.timestamp)}</span>
+                    </div>
+                    <div class="message-content">${escapeHtml(message.content)}</div>
+                </div>
+            `).join('');
+        }
+
+        function updateDeviceStatus(data) {
+            if (data.status === 'connected') {
+                devices.set(data.deviceId, data.device);
+            } else if (data.status === 'disconnected') {
+                const device = devices.get(data.deviceId);
+                if (device) {
+                    device.connected = false;
+                    devices.set(data.deviceId, device);
+                }
+            }
+            
+            renderDevices();
+            updateDeviceDropdown();
+            updateStats();
+        }
+
+        function renderDevices() {
+            const container = document.getElementById('devicesList');
+            const deviceArray = Array.from(devices.values());
+            
+            if (deviceArray.length === 0) {
+                container.innerHTML = '<div class="no-messages">No devices connected</div>';
+                return;
+            }
+            
+            container.innerHTML = deviceArray.map(device => `
+                <div class="device-item">
+                    <div class="device-info">
+                        <h4>${device.name}</h4>
+                        <p>Type: ${device.type} | Last seen: ${formatTime(device.lastSeen)}</p>
+                    </div>
+                    <div class="device-status">
+                        <div class="status-dot ${device.connected ? 'connected' : ''}"></div>
+                        <span>${device.connected ? 'Online' : 'Offline'}</span>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function updateDeviceDropdown() {
+            const select = document.getElementById('targetDevice');
+            const childDevices = Array.from(devices.values())
+                .filter(device => device.type === 'child' && device.connected);
+            
+            select.innerHTML = '<option value="">Select device...</option>';
+            
+            childDevices.forEach(device => {
+                const option = document.createElement('option');
+                option.value = device.id;
+                option.textContent = device.name;
+                select.appendChild(option);
+            });
+        }
+
+        function updateStats() {
+            const totalMessages = messages.length;
+            const connectedDevicesCount = Array.from(devices.values())
+                .filter(device => device.connected).length;
+            
+            const today = new Date().toDateString();
+            const todayMessages = messages.filter(msg => 
+                new Date(msg.timestamp).toDateString() === today
+            ).length;
+            
+            const receivedMessages = messages.filter(msg => msg.direction === 'received').length;
+            const sentMessages = messages.filter(msg => msg.direction === 'sent').length;
+            
+            const activeDevicesCount = Array.from(devices.values())
+                .filter(device => device.type === 'child' && device.connected).length;
+            
+            const lastMessage = messages[0];
+            const lastActivity = lastMessage ? formatTime(lastMessage.timestamp) : '--';
+            
+            document.getElementById('totalMessages').textContent = totalMessages;
+            document.getElementById('connectedDevices').textContent = connectedDevicesCount;
+            document.getElementById('todayMessages').textContent = todayMessages;
+            document.getElementById('receivedCount').textContent = receivedMessages;
+            document.getElementById('sentCount').textContent = sentMessages;
+            document.getElementById('activeDevices').textContent = activeDevicesCount;
+            document.getElementById('lastActivity').textContent = lastActivity;
+        }
+
+        function formatTime(timestamp) {
+            return new Date(timestamp).toLocaleString();
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function showAlert(message, type = 'success') {
+            const container = document.getElementById('alertContainer');
+            const alert = document.createElement('div');
+            alert.className = `alert alert-${type}`;
+            alert.textContent = message;
+            
+            container.appendChild(alert);
+            
+            setTimeout(() => {
+                container.removeChild(alert);
+            }, 5000);
+        }
+
+        // Form handling
+        document.getElementById('sendMessageForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            
+            const targetDevice = document.getElementById('targetDevice').value;
+            const recipientNumber = document.getElementById('recipientNumber').value;
+            const messageContent = document.getElementById('messageContent').value;
+            
+            if (!targetDevice) {
+                showAlert('Please select a target device', 'danger');
+                return;
+            }
+            
+            if (!isConnected) {
+                showAlert('Not connected to server', 'danger');
+                return;
+            }
+            
+            const sendButton = document.getElementById('sendButton');
+            sendButton.disabled = true;
+            sendButton.textContent = 'Sending...';
+            
+            socket.emit('send-sms', {
+                targetDevice: targetDevice,
+                to: recipientNumber,
+                content: messageContent
+            });
+            
+            // Reset form
+            document.getElementById('messageContent').value = '';
+            showAlert('Message sent successfully!');
+            
+            setTimeout(() => {
+                sendButton.disabled = false;
+                sendButton.textContent = '📤 Send Message';
+            }, 2000);
+        });
+
+        // Control functions
+        function clearMessages() {
+            if (confirm('Are you sure you want to clear all message history?')) {
+                messages = [];
+                renderMessages();
+                updateStats();
+                showAlert('Message history cleared');
+            }
+        }
+
+        function exportMessages() {
+            if (messages.length === 0) {
+                showAlert('No messages to export', 'warning');
+                return;
+            }
+            
+            const csvContent = "data:text/csv;charset=utf-8," 
+                + "Timestamp,From,To,Content,Direction\n"
+                + messages.map(msg => 
+                    `"${msg.timestamp}","${msg.from}","${msg.to}","${msg.content}","${msg.direction}"`
+                ).join("\n");
+            
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", `sms_export_${new Date().toISOString().split('T')[0]}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            showAlert('Messages exported successfully!');
+        }
+
+        function refreshDevices() {
+            loadDevices();
+            showAlert('Device list refreshed');
+        }
+
+        async function loadMessages() {
+            try {
+                const response = await fetch('/api/messages');
+                const data = await response.json();
+                messages = data.reverse(); // Show newest first
+                renderMessages();
+                updateStats();
+            } catch (error) {
+                console.error('Failed to load messages:', error);
+            }
+        }
+
+        async function loadDevices() {
+            try {
+                const response = await fetch('/api/devices');
+                const data = await response.json();
+                
+                devices.clear();
+                data.forEach(device => {
+                    devices.set(device.id, device);
+                });
+                
+                renderDevices();
+                updateDeviceDropdown();
+                updateStats();
+            } catch (error) {
+                console.error('Failed to load devices:', error);
+            }
+        }
+
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            initSocket();
+            updateStats();
+        });
+
+        // Auto-refresh every 30 seconds
+        setInterval(() => {
+            if (isConnected) {
+                updateStats();
+            }
+        }, 30000);
+    </script>
+</body>
+</html>
