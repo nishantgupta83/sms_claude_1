@@ -1,114 +1,177 @@
-{
-  "name": "SMS Bridge - Secure Monitoring",
-  "short_name": "SMS Bridge",
-  "description": "Secure SMS monitoring and bridge application",
-  "version": "1.0.0",
-  "start_url": "/",
-  "display": "standalone",
-  "orientation": "portrait",
-  "theme_color": "#2196F3",
-  "background_color": "#667eea",
-  "scope": "/",
-  "lang": "en-US",
-  "dir": "ltr",
-  "categories": ["utilities", "communication"],
-  "screenshots": [
-    {
-      "src": "screenshots/mobile-screenshot-1.png",
-      "sizes": "390x844",
-      "type": "image/png",
-      "form_factor": "narrow",
-      "label": "SMS Bridge main interface"
-    }
-  ],
-  "icons": [
-    {
-      "src": "icons/icon-72.png",
-      "sizes": "72x72",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "icons/icon-96.png",
-      "sizes": "96x96",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "icons/icon-128.png",
-      "sizes": "128x128",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "icons/icon-144.png",
-      "sizes": "144x144",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "icons/icon-152.png",
-      "sizes": "152x152",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "icons/icon-192.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "icons/icon-384.png",
-      "sizes": "384x384",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "icons/icon-512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any maskable"
-    }
-  ],
-  "shortcuts": [
-    {
-      "name": "Connect Device",
-      "short_name": "Connect",
-      "description": "Connect to SMS monitoring server",
-      "url": "/?action=connect",
-      "icons": [
-        {
-          "src": "icons/icon-96.png",
-          "sizes": "96x96"
-        }
-      ]
-    },
-    {
-      "name": "View Messages",
-      "short_name": "Messages",
-      "description": "View recent SMS messages",
-      "url": "/?action=messages",
-      "icons": [
-        {
-          "src": "icons/icon-96.png",
-          "sizes": "96x96"
-        }
-      ]
-    }
-  ],
-  "related_applications": [],
-  "prefer_related_applications": false,
-  "protocols": [
-    {
-      "protocol": "web+smsbridge",
-      "url": "/?protocol=%s"
-    }
-  ],
-  "edge_side_panel": {
-    "preferred_width": 400
-  },
-  "launch_handler": {
-    "client_mode": "navigate-existing"
+const express = require('express');
+const http = require('http');
+const socketIo = require('socket.io');
+const cors = require('cors');
+const path = require('path');
+require('dotenv').config();
+
+const app = express();
+const server = http.createServer(app);
+const io = socketIo(server, {
+  cors: {
+    origin: "*",
+    methods: ["GET", "POST"]
   }
-}
+});
+
+const PORT = process.env.PORT || 3001;
+
+// Middleware
+app.use(cors());
+app.use(express.json());
+app.use(express.static(path.join(__dirname, 'public')));
+
+// Store connected devices and messages
+const connectedDevices = new Map();
+const messageHistory = [];
+
+// Routes
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+app.get('/dashboard', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'dashboard.html'));
+});
+
+// API Routes
+app.get('/api/messages', (req, res) => {
+  res.json(messageHistory.slice(-100)); // Last 100 messages
+});
+
+app.get('/api/devices', (req, res) => {
+  const devices = Array.from(connectedDevices.values()).map(device => ({
+    id: device.id,
+    name: device.name,
+    connected: device.connected,
+    lastSeen: device.lastSeen
+  }));
+  res.json(devices);
+});
+
+// Socket.IO connection handling
+io.on('connection', (socket) => {
+  console.log(`Device connected: ${socket.id}`);
+
+  // Device registration
+  socket.on('register-device', (deviceInfo) => {
+    const device = {
+      id: socket.id,
+      socketId: socket.id,
+      name: deviceInfo.name || 'iPhone',
+      type: deviceInfo.type || 'child',
+      connected: true,
+      lastSeen: new Date().toISOString()
+    };
+    
+    connectedDevices.set(socket.id, device);
+    console.log(`Device registered: ${device.name} (${device.type})`);
+    
+    // Notify all clients about device status
+    io.emit('device-status', {
+      deviceId: device.id,
+      status: 'connected',
+      device: device
+    });
+  });
+
+  // Handle SMS messages from child device
+  socket.on('sms-received', (data) => {
+    const message = {
+      id: Date.now().toString(),
+      from: data.from || 'Unknown',
+      to: data.to || 'iPhone',
+      content: data.content || '',
+      timestamp: new Date().toISOString(),
+      direction: 'received',
+      deviceId: socket.id
+    };
+
+    messageHistory.push(message);
+    console.log(`SMS received from ${message.from}: ${message.content}`);
+
+    // Broadcast to all connected dashboards
+    io.emit('new-message', message);
+  });
+
+  // Handle SMS sending from dashboard
+  socket.on('send-sms', (data) => {
+    const message = {
+      id: Date.now().toString(),
+      from: 'Dashboard',
+      to: data.to || '',
+      content: data.content || '',
+      timestamp: new Date().toISOString(),
+      direction: 'sent',
+      deviceId: data.targetDevice || socket.id
+    };
+
+    messageHistory.push(message);
+    console.log(`SMS send request to ${message.to}: ${message.content}`);
+
+    // Send to specific device or broadcast to all child devices
+    if (data.targetDevice) {
+      socket.to(data.targetDevice).emit('send-sms-to-device', message);
+    } else {
+      // Send to all child devices
+      connectedDevices.forEach((device, deviceId) => {
+        if (device.type === 'child') {
+          socket.to(deviceId).emit('send-sms-to-device', message);
+        }
+      });
+    }
+
+    // Broadcast to dashboards
+    io.emit('new-message', message);
+  });
+
+  // Handle heartbeat
+  socket.on('heartbeat', () => {
+    const device = connectedDevices.get(socket.id);
+    if (device) {
+      device.lastSeen = new Date().toISOString();
+      connectedDevices.set(socket.id, device);
+    }
+  });
+
+  // Handle disconnect
+  socket.on('disconnect', () => {
+    console.log(`Device disconnected: ${socket.id}`);
+    
+    const device = connectedDevices.get(socket.id);
+    if (device) {
+      device.connected = false;
+      device.lastSeen = new Date().toISOString();
+      connectedDevices.set(socket.id, device);
+
+      // Notify all clients about device status
+      io.emit('device-status', {
+        deviceId: device.id,
+        status: 'disconnected',
+        device: device
+      });
+    }
+  });
+});
+
+// Cleanup disconnected devices periodically
+setInterval(() => {
+  const now = new Date();
+  connectedDevices.forEach((device, deviceId) => {
+    const lastSeen = new Date(device.lastSeen);
+    const timeDiff = now - lastSeen;
+    
+    // Remove devices not seen for more than 5 minutes
+    if (timeDiff > 5 * 60 * 1000) {
+      connectedDevices.delete(deviceId);
+      console.log(`Cleaned up stale device: ${device.name}`);
+    }
+  });
+}, 60000); // Check every minute
+
+server.listen(PORT, () => {
+  console.log(`🚀 SMS Mirror Server running on port ${PORT}`);
+  console.log(`📱 Child device URL: http://localhost:${PORT}`);
+  console.log(`💻 Parent dashboard: http://localhost:${PORT}/dashboard`);
+  console.log(`🌐 Network access: http://[YOUR_IP]:${PORT}`);
+});
