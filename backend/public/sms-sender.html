@@ -24,9 +24,32 @@
   <textarea id="text" placeholder="Your message here..."></textarea>
   <button onclick="sendMessage()">Send SMS</button>
 
+<!-- Add this form to sms-sender.html body -->
+<form onsubmit="sendSMS(); return false;">
+  <input id="to" placeholder="Recipient Number" required />
+  <textarea id="text" placeholder="Message Content" required></textarea>
+  <button type="submit">Send SMS</button>
+</form>
+
   <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"
           integrity="sha384-44sBv4ZKnJOUSbPxST5KHfRZYjq5jUs8lyF7L6bGQdquyzdcHKFIF1GmU1i46tRg"
           crossorigin="anonymous"></script>
+
+  <!-- Add this script to sms-sender.html -->
+<script>
+  const socket = io('http://192.168.68.65:3001'); // Replace with your server's IP if different
+
+  function sendSMS() {
+    const to = document.getElementById('to').value;
+    const text = document.getElementById('text').value;
+
+    socket.emit('sms-received', {
+      from: 'Child',
+      to: to,
+      text: text
+    });
+  }
+</script>
   <script>
     const socket = io();
 
