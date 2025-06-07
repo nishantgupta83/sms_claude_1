@@ -340,6 +340,64 @@ class DashboardApp {
             }
         }, 60000);
     }
+
+// Handle incoming SMS messages
+socket.on('sms_received', (data) => {
+    displayMessage(data);
+    showDashboardNotification('New SMS received!');
+});
+
+// Handle device connections
+socket.on('device_connected', (data) => {
+    updateDeviceList(data);
+});
+
+function displayMessage(data) {
+    const messageDiv = document.createElement('div');
+    messageDiv.className = 'message-item';
+    messageDiv.innerHTML = `
+        <div class="message-header">
+            <span class="device-id">Device: ${data.sender}</span>
+            <span class="timestamp">${new Date(data.timestamp).toLocaleString()}</span>
+        </div>
+        <div class="message-content">${data.message}</div>
+        <div class="message-type">Type: ${data.type}</div>
+    `;
+    
+    document.getElementById('messageHistory').prepend(messageDiv);
+}
+
+function updateDeviceList(deviceData) {
+    const deviceDiv = document.createElement('div');
+    deviceDiv.className = 'device-item';
+    deviceDiv.innerHTML = `
+        <strong>Device Connected:</strong> ${deviceData.deviceInfo?.platform || 'Unknown'}
+        <br>Connected: ${new Date(deviceData.timestamp).toLocaleString()}
+        <br>ID: ${deviceData.deviceId}
+    `;
+    
+    document.getElementById('deviceList').appendChild(deviceDiv);
+}
+
+// Send notification request to all devices
+document.getElementById('sendNotification').addEventListener('click', () => {
+    socket.emit('broadcast_request', {
+        type: 'sms_check_request',
+        message: 'Please check and share any new SMS messages',
+        timestamp: new Date().toISOString()
+    });
+    
+    showDashboardNotification('SMS check request sent to all devices');
+});
+
+function showDashboardNotification(message) {
+    const notification = document.createElement('div');
+    notification.className = 'dashboard-notification';
+    notification.textContent = message;
+    document.body.appendChild(notification);
+    setTimeout(() => notification.remove(), 4000);
+}
+    
 }
 
 // Initialize dashboard when DOM is loaded
