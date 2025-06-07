@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>SMS Sender (Simulated)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body {
+      font-family: sans-serif;
+      padding: 20px;
+    }
+    input, textarea, button {
+      display: block;
+      margin: 10px 0;
+      width: 100%;
+      font-size: 16px;
+    }
+  </style>
+</head>
+<body>
+  <h2>📩 Simulate SMS from Kid's Phone</h2>
+  <label>From:</label>
+  <input type="text" id="from" placeholder="e.g. Mom" />
+  <label>Text:</label>
+  <textarea id="text" placeholder="Your message here..."></textarea>
+  <button onclick="sendMessage()">Send SMS</button>
+
+  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"
+          integrity="sha384-44sBv4ZKnJOUSbPxST5KHfRZYjq5jUs8lyF7L6bGQdquyzdcHKFIF1GmU1i46tRg"
+          crossorigin="anonymous"></script>
+  <script>
+    const socket = io();
+
+    // Register the device as "Child Device"
+    socket.emit('register-device', {
+      name: "Child Device",
+      type: "iPhone"
+    });
+
+    function sendMessage() {
+      const from = document.getElementById('from').value;
+      const text = document.getElementById('text').value;
+
+      socket.emit('sms-received', {
+        from,
+        text
+      });
+
+      alert('Simulated SMS sent to dashboard!');
+      document.getElementById('text').value = '';
+    }
+  </script>
+</body>
+</html>
