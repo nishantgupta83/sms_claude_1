@@ -180,6 +180,10 @@ server.listen(PORT, () => {
 });
 */
 
+
+/*  VERSION 2.0
+ PREPLIXITY with open port 
+ 
 const express = require('express');
 const http = require('http');
 const socketIo = require('socket.io');
@@ -308,4 +312,118 @@ app.listen(port, host, function() {
     console.log(`Server running on all interfaces:${port}`);
     console.log(`Local access: http://localhost:${port}`);
     console.log(`Network access: http://[YOUR-IP-ADDRESS]:${port}`);
+});
+*/
+
+/*    VERSION 3.0 chapgtp to fix the PORT issue */
+
+const express = require('express');
+const http = require('http');
+const socketIo = require('socket.io');
+const cors = require('cors');
+const path = require('path');
+require('dotenv').config();
+
+const app = express();
+const PORT = process.env.PORT || 3001;
+const HOST = '0.0.0.0'; // Accept connections from any network interface
+
+const server = http.createServer(app);
+const io = socketIo(server, {
+  cors: {
+    origin: "*",
+    methods: ["GET", "POST"]
+  }
+});
+
+// Middleware
+app.use(cors());
+app.use(express.json());
+app.use(express.static(path.join(__dirname, 'public')));
+
+// Store connected devices and messages
+const connectedDevices = new Map();
+const messageHistory = [];
+
+// Routes
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+app.get('/dashboard.html', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'dashboard.html'));
+});
+
+app.get('/api/messages', (req, res) => {
+  res.json(messageHistory);
+});
+
+app.get('/api/devices', (req, res) => {
+  const devices = Array.from(connectedDevices.values());
+  res.json(devices);
+});
+
+// Socket.IO connection handling
+io.on('connection', (socket) => {
+  console.log('New client connected:', socket.id);
+
+  socket.on('register-device', (deviceInfo) => {
+    const device = {
+      id: socket.id,
+      ...deviceInfo,
+      connected: true,
+      lastSeen: new Date()
+    };
+    connectedDevices.set(socket.id, device);
+    socket.broadcast.emit('device-connected', device);
+    console.log('Device registered:', device.name || device.type);
+  });
+
+  socket.on('sms-received', (smsData) => {
+    const message = {
+      id: Date.now() + Math.random(),
+      ...smsData,
+      timestamp: new Date(),
+      deviceId: socket.id
+    };
+
+    messageHistory.push(message);
+    if (messageHistory.length > 1000) messageHistory.shift();
+
+    io.emit('new-message', message);
+    console.log('SMS received:', message.from, message.text?.substring(0, 50));
+  });
+
+  socket.on('send-message', (messageData) => {
+    const targetDevice = connectedDevices.get(messageData.deviceId);
+    if (targetDevice) {
+      socket.to(messageData.deviceId).emit('send-sms', {
+        to: messageData.to,
+        text: messageData.text
+      });
+      console.log('Message sent to device:', targetDevice.name);
+    }
+  });
+
+  socket.on('disconnect', () => {
+    const device = connectedDevices.get(socket.id);
+    if (device) {
+      device.connected = false;
+      device.lastSeen = new Date();
+      socket.broadcast.emit('device-disconnected', device);
+      console.log('Device disconnected:', device.name || socket.id);
+    }
+    connectedDevices.delete(socket.id);
+  });
+
+  socket.on('heartbeat', () => {
+    const device = connectedDevices.get(socket.id);
+    if (device) device.lastSeen = new Date();
+  });
+});
+
+// ✅ Corrected: start the server using http.createServer
+server.listen(PORT, HOST, () => {
+  console.log(`✅ Server is running on http://${HOST}:${PORT}`);
+  console.log(`🌐 Access on LAN: http://[YOUR-IP-ADDRESS]:${PORT}`);
 });
