@@ -1,4 +1,7 @@
-<!DOCTYPE html>
+ <!DOCTYPE html>
+<!--
+VERSION 1.0 CLAUDE
+
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -750,5 +753,93 @@
             }
         }, 30000);
     </script>
+</body>
+</html>
+
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SMS Monitor Dashboard</title>
+    <link rel="stylesheet" href="dashboard-styles.css">
+</head>
+<body>
+    <div class="header">
+        <h1>SMS Monitor Dashboard</h1>
+        <p>Real-time SMS monitoring and device management</p>
+        <div class="connection-status">
+            <span id="connection-indicator" class="status-indicator offline"></span>
+            <span id="connection-text">Connecting...</span>
+        </div>
+    </div>
+
+    <div class="container">
+        <aside class="sidebar">
+            <div class="section">
+                <h3 class="section-title">Connected Devices</h3>
+                <div id="devices-list" class="devices-container">
+                    <div class="alert alert-info">
+                        No devices connected yet
+                    </div>
+                </div>
+            </div>
+
+            <div class="section">
+                <h3 class="section-title">Quick Stats</h3>
+                <div class="stats-mini">
+                    <div class="stat-mini">
+                        <span class="stat-mini-number" id="total-messages">0</span>
+                        <span class="stat-mini-label">Total Messages</span>
+                    </div>
+                    <div class="stat-mini">
+                        <span class="stat-mini-number" id="active-devices">0</span>
+                        <span class="stat-mini-label">Active Devices</span>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <div class="section">
+                <h3 class="section-title">Recent Messages</h3>
+                <div id="messages-container" class="message-container">
+                    <div class="message-placeholder">
+                        <p>No messages yet. Messages will appear here when devices are connected.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section">
+                <h3 class="section-title">Send Message</h3>
+                <form id="send-message-form" class="send-message-form">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="device-select">Target Device:</label>
+                            <select id="device-select" class="form-control" required>
+                                <option value="">Select a device...</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="phone-number">Phone Number:</label>
+                            <input type="tel" id="phone-number" class="form-control" 
+                                   placeholder="+1234567890" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="message-text">Message:</label>
+                        <textarea id="message-text" class="form-control" rows="3" 
+                                  placeholder="Type your message here..." required maxlength="160"></textarea>
+                        <small class="char-counter">0/160 characters</small>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Send Message</button>
+                </form>
+            </div>
+        </main>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="dashboard-app.js"></script>
 </body>
 </html>
