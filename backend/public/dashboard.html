@@ -843,5 +843,67 @@ VERSION 1.0 CLAUDE
 
     <script src="/socket.io/socket.io.js"></script>
     <script src="dashboard-app.js"></script>
+<!-- Add this script to dashboard.html -->
+<script>
+  const socket = io();
+  const conversations = {};
+
+  function renderConversations() {
+    const container = document.getElementById('conversations');
+    container.innerHTML = '';
+
+    Object.keys(conversations).forEach((sender) => {
+      const thread = document.createElement('div');
+      thread.className = 'conversation';
+
+      const header = document.createElement('h3');
+      header.textContent = `Conversation with: ${sender}`;
+      thread.appendChild(header);
+
+      conversations[sender].forEach(msg => {
+        const line = document.createElement('div');
+        line.className = 'message';
+        line.textContent = `${msg.timestamp}: ${msg.text}`;
+        thread.appendChild(line);
+      });
+
+      container.appendChild(thread);
+    });
+  }
+
+  socket.on('new-message', (message) => {
+    const sender = message.from || 'Unknown';
+
+    if (!conversations[sender]) {
+      conversations[sender] = [];
+    }
+
+    conversations[sender].push({
+      text: message.text,
+      timestamp: new Date(message.timestamp).toLocaleTimeString()
+    });
+
+    renderConversations();
+  });
+</script>
+
+ <!-- Add some basic styles -->
+<style>
+  .conversation {
+    border: 1px solid #ccc;
+    margin-bottom: 1rem;
+    padding: 0.5rem;
+    border-radius: 8px;
+  }
+  .conversation h3 {
+    margin: 0 0 0.5rem;
+  }
+  .message {
+    padding: 2px 0;
+    border-bottom: 1px dashed #eee;
+  }
+</style>
+
+ 
 </body>
 </html>
