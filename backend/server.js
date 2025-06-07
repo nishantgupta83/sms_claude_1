@@ -386,10 +386,8 @@ io.on('connection', (socket) => {
       timestamp: new Date(),
       deviceId: socket.id
     };
-
+    
     messageHistory.push(message);
-    if (messageHistory.length > 1000) messageHistory.shift();
-
     io.emit('new-message', message);
     console.log('SMS received:', message.from, message.text?.substring(0, 50));
   });
