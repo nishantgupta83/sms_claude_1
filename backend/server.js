@@ -302,8 +302,10 @@ io.on('connection', (socket) => {
 
 // Start server
 const PORT = process.env.PORT || 3001;
-server.listen(PORT, '0.0.0.0', () => {
-  console.log(`SMS Mirror Server running on http://localhost:${PORT}`);
-  console.log(`Dashboard: http://localhost:${PORT}/dashboard.html`);
-  console.log(`Network access: http://[YOUR_IP]:${PORT}`);
+const host = '0.0.0.0'; // Listen on all network interfaces
+// This allows connections from other devices on the same network
+app.listen(port, host, function() {
+    console.log(`Server running on all interfaces:${port}`);
+    console.log(`Local access: http://localhost:${port}`);
+    console.log(`Network access: http://[YOUR-IP-ADDRESS]:${port}`);
 });
